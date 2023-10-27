@@ -24,16 +24,17 @@ float responseHolder = 0;
 const int limit = numeric_limits<int>::max();
 
 void updateInput(int front, int update, int time, vector<int>bursts, vector<vector<int>>& processVector, vector<pair<int, int>>& input, queue<int>& ready) {
+    
     if (bursts[front] < processVector[front].size() - 2) {
-        for (int n = 0; n < processVector.size(); n++) {
-            if (input[n].second == front) {
-                input[n].first = update + time;
-                if (input[n].first < input[n].second) {
+            for (auto &input : input) {
+                if (input.second == front) {
+                    input.first = update + time;
+                }
+                if (input.first < input.second) {
                     ready.pop();
-                    cout << "Popped " << input[n].first;
+                    cout << "Popped " << input.first;
                 }
             }
-        }
     }
 }
 
@@ -58,7 +59,6 @@ void processLevel3Temp(int& time, int temp, vector<int>bursts, vector<vector<int
 }
 
 
-
 void mlfq(vector<vector<int>> processVector, int level, int tq1, int tq2, int time, int  CPUtime, int x, queue<int> ready, vector<int> bursts) {
     // Define tally for results
     
@@ -80,111 +80,109 @@ void mlfq(vector<vector<int>> processVector, int level, int tq1, int tq2, int ti
     input[0].first = 0;
     // While ready queue is not empty create front as the front of queue
     while(!ready.empty() || !secondQueue.empty() || !fcfsQueue.empty()) {
-        if(!ready.empty()) {
-            int front = ready.front();
-            int update = processVector[front][bursts[front] + 1];
-            ready.pop();
+            if(!ready.empty()) {
+                int front = ready.front();
+                int update = processVector[front][bursts[front] + 1];
+                ready.pop();
 
-            waitingTime[front] += time - arrivalTime[front];
-            responseTime[front] = (responseTime[front] == -1) ? (time - arrivalTime[front]) : responseTime[front];
-            int temp = processVector[front][bursts[front]];
-            cout << "\nStats:" << endl;
-            cout<<"Current Execution Time: "<< time <<endl;
-            cout<<"Next Process: Process "<< front <<endl; 
-            if (temp > tq1) {
-                processLevel3Temp(time, temp, bursts, processVector, secondQueue, level, arrivalTime, front, tq1);
+                waitingTime[front] += time - arrivalTime[front];
+                responseTime[front] = (responseTime[front] == -1) ? (time - arrivalTime[front]) : responseTime[front];
+                int temp = processVector[front][bursts[front]];
+                cout << "\nStats:" << endl;
+                cout<<"Current Execution Time: "<< time <<endl;
+                cout<<"Next Process: Process "<< front <<endl; 
+                if (temp > tq1) {
+                    processLevel3Temp(time, temp, bursts, processVector, secondQueue, level, arrivalTime, front, tq1);
+                }
+                else {
+                    time += processVector[front][bursts[front]];
+                    updateInput(front, update, time, bursts,processVector, input, ready);
+                bursts[front] += 2;    
+                } 
             }
-            else {
+            else if (!secondQueue.empty()) {
+                int front = secondQueue.front();
+                int update = processVector[front][bursts[front] + 1];
+                secondQueue.pop();
+
+                int temp = processVector[front][bursts[front]];
+
+                cout << "\nStats:" << endl;
+                cout<<"Current Execution Time: "<< time <<endl;
+                cout<<"Next Process: Process "<< front <<endl; 
+                if (temp > tq2) {
+                    processLevel3Temp(time, temp, bursts, processVector, secondQueue, level, arrivalTime, front, tq2);
+                }
+                else {
+                    time += processVector[front][bursts[front]];
+                    updateInput(front, update, time, bursts,processVector, input, ready);
+                bursts[front] += 2;
+                }
+            }
+            else if (!fcfsQueue.empty()) {
+                int front = fcfsQueue.front();
+                int update = processVector[front][bursts[front] + 1];
+                fcfsQueue.pop();
+                waitingTime[front] += time - arrivalTime[front];
+                responseTime[front] = (responseTime[front] == -1) ? (time - arrivalTime[front]) : responseTime[front];
+                int temp = processVector[front][bursts[front]];
+                cout << "\nStats:" << endl;
+                cout<<"Current Execution Time: "<< time <<endl;
+                cout<<"Next Process: Process "<< front <<endl; 
                 time += processVector[front][bursts[front]];
                 updateInput(front, update, time, bursts,processVector, input, ready);
-            bursts[front] += 2;    
-            } 
-        }
-        else if (!secondQueue.empty()) {
-            int front = secondQueue.front();
-            int update = processVector[front][bursts[front] + 1];
-            secondQueue.pop();
-
-            int temp = processVector[front][bursts[front]];
-
-            cout << "\nStats:" << endl;
-            cout<<"Current Execution Time: "<< time <<endl;
-            cout<<"Next Process: Process "<< front <<endl; 
-            if (temp > tq2) {
-                processLevel3Temp(time, temp, bursts, processVector, secondQueue, level, arrivalTime, front, tq2);
+                bursts[front] += 2;
+                
             }
-            else {
-                time += processVector[front][bursts[front]];
-                updateInput(front, update, time, bursts,processVector, input, ready);
-            bursts[front] += 2;
-            }
-        }
-        else if (!fcfsQueue.empty()) {
-            int front = fcfsQueue.front();
-            int update = processVector[front][bursts[front] + 1];
-            fcfsQueue.pop();
-            waitingTime[front] += time - arrivalTime[front];
-            responseTime[front] = (responseTime[front] == -1) ? (time - arrivalTime[front]) : responseTime[front];
-            int temp = processVector[front][bursts[front]];
-            cout << "\nStats:" << endl;
-            cout<<"Current Execution Time: "<< time <<endl;
-            cout<<"Next Process: Process "<< front <<endl; 
-            time += processVector[front][bursts[front]];
-            updateInput(front, update, time, bursts,processVector, input, ready);
-            bursts[front] += 2;
-            
-        }
-        sort(input.begin(), input.end(), [](auto &left, auto &right) {
-            return left.first < right.first;
-        });
+            sort(input.begin(), input.end(), [](auto &left, auto &right) {
+                return left.first < right.first;
+            });
 
-        if(ready.empty() && secondQueue.empty() && fcfsQueue.empty()){
-            while(input[0].first != MAX && input[0].first > time) {
+            while ((ready.empty() && secondQueue.empty() && fcfsQueue.empty()) && (input[0].first != MAX && input[0].first > time)) {
                 time += 1;
                 CPUtime += 1;
             }
-        }
-        for (auto& entry : input) {
-            int i = entry.first;
-            int process = entry.second;
+            for (auto& entry : input) {
+                int i = entry.first;
+                int process = entry.second;
 
-            if (i <= time) {
-                switch (level) {
-                    case 1:
-                        ready.push(process);
-                        break;
-                    case 2:
-                        secondQueue.push(process);
-                        break;
-                    default:
-                        fcfsQueue.push(process);
-                        arrivalTime[process] = i;
-                        entry = make_pair(MAX, process); // Replace the pair with a new value
-                        break;
+                if (i <= time) {
+                    switch (level) {
+                        case 1:
+                            ready.push(process);
+                            break;
+                        case 2:
+                            secondQueue.push(process);
+                            break;
+                        default:
+                            fcfsQueue.push(process);
+                            arrivalTime[process] = i;
+                            entry = make_pair(MAX, process); // Replace the pair with a new value
+                            break;
+                    }
                 }
             }
         }
+        vector<int> turnAroundtime(processVector.size(), 0);
+        for (int n = 0; n < processVector.size(); n++) {
+            int counter = accumulate(processVector[n].begin(), processVector[n].end(), 0);
+            turnAroundtime[n] += counter + waitingTime[n];
+        }
+        timeHolder += time;
+        int addIncrement = 0;
+        burstHolder = timeHolder - CPUtime;
+        cout << "Processes" << "\t" << "Waiting time" << "\t" << "Turn Around Time" << "\t" << "Response Time" << endl;
+        for (const auto& i : input) {
+            int addIncrement = &i - &input[0];
+            waitHolder += waitingTime[addIncrement];
+            turnAroundHolder += turnAroundtime[addIncrement];
+            responseHolder += responseTime[addIncrement];
+            cout << "P" << (addIncrement + 1) << "\t\t" << waitingTime[addIncrement] << "\t\t" << turnAroundtime[addIncrement] << "\t\t\t" << responseTime[addIncrement] << endl;
+        }
+        //burstHolder += calculateBurst;
+        
+        
     }
-    vector<int> turnAroundtime(processVector.size(), 0);
-    for (int n = 0; n < processVector.size(); n++) {
-        int counter = accumulate(processVector[n].begin(), processVector[n].end(), 0);
-        turnAroundtime[n] += counter + waitingTime[n];
-}
-    timeHolder += time;
-    int addIncrement = 0;
-    burstHolder = timeHolder - CPUtime;
-    cout << "Processes" << "\t" << "Waiting time" << "\t" << "Turn Around Time" << "\t" << "Response Time" << endl;
-    for (const auto& i : input) {
-        int addIncrement = &i - &input[0];
-        waitHolder += waitingTime[addIncrement];
-        turnAroundHolder += turnAroundtime[addIncrement];
-        responseHolder += responseTime[addIncrement];
-        cout << "P" << (addIncrement + 1) << "\t\t" << waitingTime[addIncrement] << "\t\t" << turnAroundtime[addIncrement] << "\t\t\t" << responseTime[addIncrement] << endl;
-    }
-    //burstHolder += calculateBurst;
-    
-    
-}
 
 void printResult(int waittime, int turnaround, float responsetime, int time) {
     float calculateCPU = (float)burstHolder / timeHolder * 100;
