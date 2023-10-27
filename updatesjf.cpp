@@ -38,9 +38,11 @@ void sjf(vector<vector<int>> processVector, int time, int  CPUtime, int x, vecto
         x++;
     }
 
-    vector<int> arrivalTime(processVector.size(),0);
-    vector<int> waitingTime(processVector.size(),0);
+    vector<int> arrivalTime(processVector.size());
+    vector<int> waitingTime(processVector.size());
     vector<int> responseTime(processVector.size(), -1);
+    arrivalTime.reserve(0);
+    waitingTime.reserve(0);
     input[0].first = 0;
     while(!ready.empty()) {
         int front;
@@ -120,8 +122,8 @@ void sjf(vector<vector<int>> processVector, int time, int  CPUtime, int x, vecto
 
 void printResult(int waittime, int turnaround, float responsetime, int time) {
     float calculateCPU = (float)burstHolder / timeHolder * 100;
-    cout << "Complete time: " << timeHolder << endl;
-    cout << "\nCPU Usage: " << fixed << setprecision(2) << calculateCPU << endl;
+    cout << "\nComplete time: " << timeHolder << endl;
+    cout << "CPU Usage: " << fixed << setprecision(2) << calculateCPU << endl;
     cout << "\nAverage Waiting time: " << waittime/8 << endl;
     cout << "\nAverage Turnaround time: " << turnaround/8 << endl;
     cout << "\nAverage Response time: " << fixed << setprecision(2) << responsetime/8 << "\n" << endl;

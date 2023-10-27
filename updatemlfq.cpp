@@ -72,9 +72,11 @@ void mlfq(vector<vector<int>> processVector, int level, int tq1, int tq2, int ti
         input.emplace_back(MAX, x);
         x++;
     }
-    vector<int> arrivalTime(processVector.size(),0);
-    vector<int> waitingTime(processVector.size(),0);
+    vector<int> arrivalTime(processVector.size());
+    vector<int> waitingTime(processVector.size());
     vector<int> responseTime(processVector.size(), -1);
+    arrivalTime.reserve(0);
+    waitingTime.reserve(0);
     queue<int> secondQueue;
     queue<int> fcfsQueue;
     input[0].first = 0;
@@ -92,12 +94,12 @@ void mlfq(vector<vector<int>> processVector, int level, int tq1, int tq2, int ti
                 cout<<"Current Execution Time: "<< time <<endl;
                 cout<<"Next Process: Process "<< front <<endl; 
                 if (temp > tq1) {
-                    processLevel3Temp(time, temp, bursts, processVector, secondQueue, level, arrivalTime, front, tq1);
+                    processLevel2Temp(time, temp, bursts, processVector, secondQueue, level, arrivalTime, front, tq1);
                 }
                 else {
                     time += processVector[front][bursts[front]];
                     updateInput(front, update, time, bursts,processVector, input, ready);
-                bursts[front] += 2;    
+                    bursts[front] += 2;    
                 } 
             }
             else if (!secondQueue.empty()) {
@@ -186,8 +188,8 @@ void mlfq(vector<vector<int>> processVector, int level, int tq1, int tq2, int ti
 
 void printResult(int waittime, int turnaround, float responsetime, int time) {
     float calculateCPU = (float)burstHolder / timeHolder * 100;
-    cout << "Complete time: " << timeHolder << endl;
-    cout << "\nCPU Usage: " << fixed << setprecision(2) << calculateCPU << endl;
+    cout << "\nComplete time: " << timeHolder << endl;
+    cout << "CPU Usage: " << fixed << setprecision(2) << calculateCPU << endl;
     cout << "\nAverage Waiting time: " << waittime/8 << endl;
     cout << "\nAverage Turnaround time: " << turnaround/8 << endl;
     cout << "\nAverage Response time: " << fixed << setprecision(2) << responsetime/8 << "\n" << endl;

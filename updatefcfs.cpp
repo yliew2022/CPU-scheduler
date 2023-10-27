@@ -18,44 +18,50 @@ int burstHolder;
 int second;
 int turnAroundHolder = 0;
 float responseHolder = 0;
+// Get max limit of int
 const int limit = std::numeric_limits<int>::max();
-using shortest = std::pair<int, int>;
 
-class comparisonJob {
-public:
-    bool operator() (const pair<int, int>& a, const pair<int, int>& b) {
-        if (a.first != b.first) {
-            return a.first > b.first; // Smaller burst time has higher priority
-        }
-        return a.second > b.second; // Lower process ID has higher priority
-    }
-};
-
-void sjf(vector<vector<int>> processVector, int time, int  CPUtime, int x, vector<int> bursts, priority_queue<shortest, vector<shortest>, greater<shortest>> ready) {
+void fcfs(vector<vector<int>> processVector, int time, int  CPUtime, int x, queue<int> ready, vector<int> bursts) {
+    // Define tally for results
+    
+    
+    // Response time has to start at -1 otherwise all results will be 0
+    
     vector<pair<int, int>> input;
+    // Used pair command because it's split between (bursts, io time, bursts, io time, etc).
+    // Every number is split into pairs one after the other
     for (const auto& i : processVector) {
         input.emplace_back(MAX, x);
         x++;
     }
 
-    vector<int> arrivalTime(processVector.size(),0);
-    vector<int> waitingTime(processVector.size(),0);
+    
+    vector<int> arrivalTime(processVector.size());
+    vector<int> waitingTime(processVector.size());
     vector<int> responseTime(processVector.size(), -1);
+    arrivalTime.reserve(0);
+    waitingTime.reserve(0);
+
+
     input[0].first = 0;
+    // While ready queue is not empty create front as the front of queue
     while(!ready.empty()) {
-        int front;
-        tie(ignore, front) = ready.top();
+        int front = ready.front();
         ready.pop();
         int update = processVector[front][bursts[front] + 1];
+        int y = 0;
 
         if(responseTime[front] == -1) {
+            // Get first response time
             responseTime[front] = time - arrivalTime[front];
-        }
+        }    
+        // Get the front of the queue to find time spent while ready
         waitingTime[front] += time - arrivalTime[front];
+
         time += processVector[front][bursts[front]];
         if(bursts[front] < processVector[front].size() - 2){
-            for(int n = 0; n < processVector.size(); n++){
-                if(input[n].second == front){
+            for(int n=0; n < processVector.size(); n++){
+                if(input[n].second == front) {
                     input[n].first = update + time;
                     if (input[n].first < input[n].second) {
                         ready.pop();
@@ -63,38 +69,37 @@ void sjf(vector<vector<int>> processVector, int time, int  CPUtime, int x, vecto
                     }
                 }
             }
+        
         }
-
+        
         cout << "\nStats:" << endl;
         cout<<"Current Execution Time: "<< time <<endl;
         cout<<"Next Process: Process "<< front <<endl; 
 
-        int y = 0;
         if(ready.empty()){
             while(input[0].first != MAX && input[0].first > time) {
                 time += 1;
                 CPUtime += 1;
             }
         }
+
         for (auto& input : input) {
-            if (input.first <= time) {
-                ready.push([&]() {
-                    return std::make_pair(processVector[input.second][bursts[input.second]], input.second);
-                }());
-                if (input.first < input.second) {
-                    ready.pop();
-                    cout << "Popped" << input.first;
-                }
-                arrivalTime[input.second] = input.first;
-                input.first = MAX;
+        if (input.first <= time) {
+            ready.emplace(input.second);
+            if (input.first < input.second) {
+                ready.pop();
+                cout << "Popped" << input.first;
+            }
+
+            arrivalTime[input.second] = input.first;
+            input.first = MAX;
             }
         }   
-        
+
         bursts[front] += 2;
         sort(input.begin(), input.end(), [](auto &left, auto &right) {
             return left.first < right.first;
         });
-        second = input[y].second;
     }  
     vector<int> turnAroundtime(processVector.size(), 0);
     for(int n = 0; n < processVector.size(); n++){
@@ -106,27 +111,28 @@ void sjf(vector<vector<int>> processVector, int time, int  CPUtime, int x, vecto
     }
     timeHolder += time;
     int addIncrement = 0;
-    burstHolder = time - CPUtime;
+    burstHolder = timeHolder - CPUtime;
     cout << "Processes" << "\t" << "Waiting time" << "\t" << "Turn Around Time" << "\t" << "Response Time" << endl;
     for (auto i : input) {
         waitHolder += waitingTime[addIncrement];
         turnAroundHolder += turnAroundtime[addIncrement];
         responseHolder += responseTime[addIncrement];
-        
         cout << "P" << (addIncrement + 1) << "\t\t" << waitingTime[addIncrement] << "\t\t" << turnAroundtime[addIncrement] << "\t\t\t" << responseTime[addIncrement] << endl;
         addIncrement++;
     }
+    //burstHolder += calculateBurst;
+    
+    
 }
 
 void printResult(int waittime, int turnaround, float responsetime, int time) {
     float calculateCPU = (float)burstHolder / timeHolder * 100;
-    cout << "Complete time: " << timeHolder << endl;
-    cout << "\nCPU Usage: " << fixed << setprecision(2) << calculateCPU << endl;
+    cout << "\nComplete time: " << timeHolder << endl;
+    cout << "CPU Usage: " << fixed << setprecision(2) << calculateCPU << endl;
     cout << "\nAverage Waiting time: " << waittime/8 << endl;
     cout << "\nAverage Turnaround time: " << turnaround/8 << endl;
     cout << "\nAverage Response time: " << fixed << setprecision(2) << responsetime/8 << "\n" << endl;
 }
-
 
 int main() {
     int proc = 8;
@@ -134,7 +140,7 @@ int main() {
     int time = 0;
     int  CPUtime = 0;
     vector<vector<int>> processVector(proc);
-    priority_queue<shortest, vector<shortest>, greater<shortest>> pushQueue;
+    queue <int> pushQueue;
     processVector[0] = {5, 27, 3, 31, 5, 43, 4, 18, 6, 22, 4, 26, 3, 24, 4};
     processVector[1] = {4, 48, 5, 44, 7, 42, 12, 37, 9, 76, 4, 41, 9, 31, 7, 43, 8};
     processVector[2] = {8, 33, 12, 41, 18, 65, 14, 21, 4, 61, 15, 18, 14, 26, 5, 31, 6};
@@ -143,18 +149,11 @@ int main() {
     processVector[5] = {11, 22, 4, 8, 5, 10, 6, 12, 7, 14, 9, 18, 12, 24, 15, 30, 8};
     processVector[6] = {14, 46, 17, 41, 11, 42, 15, 21, 4, 32, 7, 19, 16, 33, 10};
     processVector[7] = {4, 14, 5, 33, 6, 51, 14, 73, 16, 87, 6};
-    vector<int> bursts(proc,0);int value = processVector[x][bursts[x]];
-    priority_queue<pair<int, int>, vector<pair<int, int>>, comparisonJob> priority_queue;
-    /*for (int i = 0; i < processVector.size(); i++) {
-        pushQueue.push(make_pair(processVector[i][bursts[i]], i));
-    }*/
-
+    vector<int> bursts(proc,0);
     if (proc == 8) {
         int x = 0;
         for (auto i : processVector) {
-            pushQueue.push([&]() {
-                    return std::make_pair(value, x);
-                }());
+            pushQueue.push(x);
             x++;
         }
     }
@@ -163,8 +162,8 @@ int main() {
         return 0;
     }
 
-    cout << "\nSJF\n" << endl;
-    sjf(processVector, time, CPUtime, x, bursts, pushQueue);
+    cout << "\nFCFS\n" << endl;
+    fcfs(processVector, time, CPUtime, x, pushQueue, bursts);
     printResult(waitHolder, turnAroundHolder, responseHolder, timeHolder);
     return 0;
 }

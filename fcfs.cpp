@@ -121,12 +121,13 @@ void fcfs(vector<vector<int>> processVector, int time, int  CPUtime, int x, queu
     
 }
 
-void printResult(int waittime, int turnaround, int responsetime, int time) {
-    cout << "\nCPU Usage: " << (float)burstHolder / timeHolder * 100 << endl;
+void printResult(int waittime, int turnaround, float responsetime, int time) {
+    float calculateCPU = (float)burstHolder / timeHolder * 100;
     cout << "Complete time: " << timeHolder << endl;
+    cout << "\nCPU Usage: " << fixed << setprecision(2) << calculateCPU << endl;
     cout << "\nAverage Waiting time: " << waittime/8 << endl;
     cout << "\nAverage Turnaround time: " << turnaround/8 << endl;
-    cout << "\nAverage Response time: " << responsetime/8 << "\n" << endl;
+    cout << "\nAverage Response time: " << fixed << setprecision(2) << responsetime/8 << "\n" << endl;
 }
 
 int main() {
