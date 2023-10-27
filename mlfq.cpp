@@ -5,6 +5,7 @@
 #include <limits>
 #include <algorithm>
 #include <math.h>
+#include <numeric>
 #define MAX limit
 using namespace std;
 
@@ -20,7 +21,43 @@ int second;
 int turnAroundHolder = 0;
 float responseHolder = 0;
 // Get max limit of int
-const int limit = std::numeric_limits<int>::max();
+const int limit = numeric_limits<int>::max();
+
+void updateInput(int front, int update, int time, vector<int>bursts, vector<vector<int>>& processVector, vector<pair<int, int>>& input, queue<int>& ready) {
+    if (bursts[front] < processVector[front].size() - 2) {
+        for (int n = 0; n < processVector.size(); n++) {
+            if (input[n].second == front) {
+                input[n].first = update + time;
+                if (input[n].first < input[n].second) {
+                    ready.pop();
+                    cout << "Popped " << input[n].first;
+                }
+            }
+        }
+    }
+}
+
+void processLevel2Temp(int& time, int temp, vector<int>bursts, vector<vector<int>>& processVector, queue<int>& secondQueue, int& level, vector<int>& arrivalTime, int front, int tq1) {
+    if (temp > tq1) {
+        time += tq1;
+        processVector[front][bursts[front]] = temp - tq1;
+        secondQueue.push(front);
+        level = 2;
+        arrivalTime[front] = time;
+    }
+}
+
+void processLevel3Temp(int& time, int temp, vector<int>bursts, vector<vector<int>>& processVector, queue<int>& secondQueue, int& level, vector<int>& arrivalTime, int front, int tq2) {
+    if (temp > tq2) {
+        time += tq2;
+        processVector[front][bursts[front]] = temp - tq2;
+        secondQueue.push(front);
+        level = 3;
+        arrivalTime[front] = time;
+    }
+}
+
+
 
 void mlfq(vector<vector<int>> processVector, int level, int tq1, int tq2, int time, int  CPUtime, int x, queue<int> ready, vector<int> bursts) {
     // Define tally for results
@@ -55,25 +92,11 @@ void mlfq(vector<vector<int>> processVector, int level, int tq1, int tq2, int ti
             cout<<"Current Execution Time: "<< time <<endl;
             cout<<"Next Process: Process "<< front <<endl; 
             if (temp > tq1) {
-                time += tq1;
-                processVector[front][bursts[front]] = temp - tq1;
-                secondQueue.push(front);
-                level = 2;
-                arrivalTime[front] = time;
+                processLevel3Temp(time, temp, bursts, processVector, secondQueue, level, arrivalTime, front, tq1);
             }
             else {
                 time += processVector[front][bursts[front]];
-                if (bursts[front] < processVector[front].size() - 2) {
-                    for (int n = 0; n < processVector.size(); n++) {
-                        if (input[n].second == front) {
-                            input[n].first = update + time;
-                            if (input[n].first < input[n].second) {
-                                ready.pop();
-                                cout << "Popped" << input[n].first;
-                            }
-                        }
-                    }
-                }
+                updateInput(front, update, time, bursts,processVector, input, ready);
             bursts[front] += 2;    
             } 
         }
@@ -88,25 +111,11 @@ void mlfq(vector<vector<int>> processVector, int level, int tq1, int tq2, int ti
             cout<<"Current Execution Time: "<< time <<endl;
             cout<<"Next Process: Process "<< front <<endl; 
             if (temp > tq2) {
-                time += tq2;
-                processVector[front][bursts[front]] = temp - tq2;
-                secondQueue.push(front);
-                level = 3;
-                arrivalTime[front] = time;
+                processLevel3Temp(time, temp, bursts, processVector, secondQueue, level, arrivalTime, front, tq2);
             }
             else {
                 time += processVector[front][bursts[front]];
-                if (bursts[front] < processVector[front].size() - 2) {
-                    for (int n = 0; n < processVector.size(); n++) {
-                        if (input[n].second == front) {
-                            input[n].first = update + time;
-                            if (input[n].first < input[n].second) {
-                                ready.pop();
-                                cout << "Popped" << input[n].first;
-                            }
-                        }
-                    }
-                }
+                updateInput(front, update, time, bursts,processVector, input, ready);
             bursts[front] += 2;
             }
         }
@@ -115,25 +124,15 @@ void mlfq(vector<vector<int>> processVector, int level, int tq1, int tq2, int ti
             int update = processVector[front][bursts[front] + 1];
             fcfsQueue.pop();
             waitingTime[front] += time - arrivalTime[front];
-            if(responseTime[front] == -1) {
-                responseTime[front] = time - arrivalTime[front];
-            }
+            responseTime[front] = (responseTime[front] == -1) ? (time - arrivalTime[front]) : responseTime[front];
             int temp = processVector[front][bursts[front]];
             cout << "\nStats:" << endl;
             cout<<"Current Execution Time: "<< time <<endl;
             cout<<"Next Process: Process "<< front <<endl; 
             time += processVector[front][bursts[front]];
-            if (bursts[front] < processVector[front].size() - 2) {
-                for (int n = 0; n < processVector.size(); n++) {
-                    if (input[n].second == front) {
-                        input[n].first = update + time;
-                        if (input[n].first < input[n].second) {
-                            ready.pop();
-                        }
-                    }
-                }
+            updateInput(front, update, time, bursts,processVector, input, ready);
             bursts[front] += 2;
-            }
+            
         }
         sort(input.begin(), input.end(), [](auto &left, auto &right) {
             return left.first < right.first;
@@ -145,41 +144,42 @@ void mlfq(vector<vector<int>> processVector, int level, int tq1, int tq2, int ti
                 CPUtime += 1;
             }
         }
+        for (auto& entry : input) {
+            int i = entry.first;
+            int process = entry.second;
 
-        for (int i = 0; i < processVector.size(); i++) {
-            if(input[i].first <= time) {
-                if(level == 1) {
-                    ready.push(input[i].second);
-                }
-                else if (level == 2) {
-                    secondQueue.push(input[i].second);
-                }
-                else {
-                    fcfsQueue.push(input[i].second);
-                    arrivalTime[input[i].second] = input[i].first;
-                    input[i].first = MAX;
+            if (i <= time) {
+                switch (level) {
+                    case 1:
+                        ready.push(process);
+                        break;
+                    case 2:
+                        secondQueue.push(process);
+                        break;
+                    default:
+                        fcfsQueue.push(process);
+                        arrivalTime[process] = i;
+                        entry = make_pair(MAX, process); // Replace the pair with a new value
+                        break;
                 }
             }
         }
     }
     vector<int> turnAroundtime(processVector.size(), 0);
-    for(int n = 0; n < processVector.size(); n++){
-        int counter = 0;
-            for(int k = 0; k < processVector[n].size(); k++){
-                counter += processVector[n][k];
-            }
+    for (int n = 0; n < processVector.size(); n++) {
+        int counter = accumulate(processVector[n].begin(), processVector[n].end(), 0);
         turnAroundtime[n] += counter + waitingTime[n];
-    }
+}
     timeHolder += time;
     int addIncrement = 0;
     burstHolder = timeHolder - CPUtime;
     cout << "Processes" << "\t" << "Waiting time" << "\t" << "Turn Around Time" << "\t" << "Response Time" << endl;
-    for (auto i : input) {
+    for (const auto& i : input) {
+        int addIncrement = &i - &input[0];
         waitHolder += waitingTime[addIncrement];
         turnAroundHolder += turnAroundtime[addIncrement];
         responseHolder += responseTime[addIncrement];
         cout << "P" << (addIncrement + 1) << "\t\t" << waitingTime[addIncrement] << "\t\t" << turnAroundtime[addIncrement] << "\t\t\t" << responseTime[addIncrement] << endl;
-        addIncrement++;
     }
     //burstHolder += calculateBurst;
     
