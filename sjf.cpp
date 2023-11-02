@@ -53,6 +53,12 @@ void sjf(vector<vector<int>> processVector, int time, int  CPUtime, int x, vecto
         }
         waitingTime[front] += time - arrivalTime[front];
         time += processVector[front][bursts[front]];
+        if(ready.empty()){
+            while(input[0].first != MAX && input[0].first >= time) {
+                time += 1;
+                CPUtime += 1;
+            }
+        }
         if(bursts[front] < processVector[front].size() - 2){
             for(int n = 0; n < processVector.size(); n++){
                 if(input[n].second == front){
@@ -70,12 +76,7 @@ void sjf(vector<vector<int>> processVector, int time, int  CPUtime, int x, vecto
         cout<<"Next Process: Process "<< front <<endl; 
 
         int y = 0;
-        if(ready.empty()){
-            while(input[0].first != MAX && input[0].first > time) {
-                time += 1;
-                CPUtime += 1;
-            }
-        }
+        
         for (auto& input : input) {
             if (input.first <= time) {
                 ready.push([&]() {

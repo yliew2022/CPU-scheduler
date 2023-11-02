@@ -4,9 +4,11 @@
 #include <queue>
 #include <limits>
 #include <algorithm>
+#include <numeric>
 #define MAX limit
 using namespace std;
 
+// Initialize vectors and global variables
 vector<int> arrivalTime;
 vector<int> waitingTime;
 vector<int> turnAroundtime;
@@ -19,30 +21,26 @@ int second;
 int turnAroundHolder = 0;
 float responseHolder = 0;
 // Get max limit of int
-const int limit = std::numeric_limits<int>::max();
+const int limit = numeric_limits<int>::max();
 
 void fcfs(vector<vector<int>> processVector, int time, int  CPUtime, int x, queue<int> ready, vector<int> bursts) {
-    // Define tally for results
-    
-    
-    // Response time has to start at -1 otherwise all results will be 0
-    
-    vector<pair<int, int>> input;
     // Used pair command because it's split between (bursts, io time, bursts, io time, etc).
     // Every number is split into pairs one after the other
+    vector<pair<int, int>> input;
+
+    // Place value into input vector
     for (const auto& i : processVector) {
         input.emplace_back(MAX, x);
         x++;
     }
 
-    
+    // Initialize vectors by size then set each value to 0
     vector<int> arrivalTime(processVector.size());
     vector<int> waitingTime(processVector.size());
+    // Response time has to be -1 otherwise all values will be 0
     vector<int> responseTime(processVector.size(), -1);
     arrivalTime.reserve(0);
     waitingTime.reserve(0);
-
-
     input[0].first = 0;
     // While ready queue is not empty create front as the front of queue
     while(!ready.empty()) {
@@ -51,80 +49,83 @@ void fcfs(vector<vector<int>> processVector, int time, int  CPUtime, int x, queu
         int update = processVector[front][bursts[front] + 1];
         int y = 0;
 
-        if(responseTime[front] == -1) {
-            // Get first response time
-            responseTime[front] = time - arrivalTime[front];
-        }    
+        // We defined value of response time as -1 so this is true
+        responseTime[front] = (responseTime[front] == -1) ? (time - arrivalTime[front]) : responseTime[front];   
         // Get the front of the queue to find time spent while ready
         waitingTime[front] += time - arrivalTime[front];
-
         time += processVector[front][bursts[front]];
-        if(bursts[front] < processVector[front].size() - 2){
-            for(int n=0; n < processVector.size(); n++){
-                if(input[n].second == front) {
-                    input[n].first = update + time;
-                    if (input[n].first < input[n].second) {
-                        ready.pop();
-                        cout << "Popped" << input[n].first;
-                    }
+        // Update input time if second input is the front of queue
+        if (bursts[front] < processVector[front].size() - 2) {
+            for (auto &input : input) {
+                if (input.second == front) {
+                    input.first = update + time;
+                }
+                if (input.first < input.second) {
+                    ready.pop();
+                    cout << "Popped " << input.first;
                 }
             }
-        
         }
-        
+        // Print out execution time and next process
         cout << "\nStats:" << endl;
         cout<<"Current Execution Time: "<< time <<endl;
         cout<<"Next Process: Process "<< front <<endl; 
-
+        // If there isn't any processes then add the time and CPU time to find CPU utilization
         if(ready.empty()){
             while(input[0].first != MAX && input[0].first > time) {
                 time += 1;
                 CPUtime += 1;
             }
         }
-
+        // If first pair is less than time then get value of second pair
         for (auto& input : input) {
         if (input.first <= time) {
-            ready.emplace(input.second);
-            if (input.first < input.second) {
-                ready.pop();
-                cout << "Popped" << input.first;
-            }
-
-            arrivalTime[input.second] = input.first;
-            input.first = MAX;
+                ready.emplace(input.second);
+                if (input.first < input.second) {
+                    ready.pop();
+                    cout << "Popped" << input.first;
+                }
+                // Get arrival time
+                arrivalTime[input.second] = input.first;
+                input.first = MAX;
             }
         }   
-
         bursts[front] += 2;
+        // Sort results
         sort(input.begin(), input.end(), [](auto &left, auto &right) {
             return left.first < right.first;
         });
     }  
+
+    // Find turnaround time
+    int n = 0;
     vector<int> turnAroundtime(processVector.size(), 0);
-    for(int n = 0; n < processVector.size(); n++){
-        int counter = 0;
-            for(int k = 0; k < processVector[n].size(); k++){
-                counter += processVector[n][k];
-            }
+    for (const auto& input : processVector) {
+        // Use acccumulate to add all values in vector
+        int counter = accumulate(processVector[n].begin(), processVector[n].end(), 0);
+        // Add accumulated values with current waiting time
         turnAroundtime[n] += counter + waitingTime[n];
+        n++;
     }
     timeHolder += time;
     int addIncrement = 0;
     burstHolder = timeHolder - CPUtime;
+    // Create simple table
     cout << "Processes" << "\t" << "Waiting time" << "\t" << "Turn Around Time" << "\t" << "Response Time" << endl;
-    for (auto i : input) {
+    for (const auto& i : input) {
+        // Get index of value
+        int addIncrement = &i - &input[0];
+        // Add global variables to print values later on
         waitHolder += waitingTime[addIncrement];
         turnAroundHolder += turnAroundtime[addIncrement];
         responseHolder += responseTime[addIncrement];
+        // Print current values
         cout << "P" << (addIncrement + 1) << "\t\t" << waitingTime[addIncrement] << "\t\t" << turnAroundtime[addIncrement] << "\t\t\t" << responseTime[addIncrement] << endl;
         addIncrement++;
     }
-    //burstHolder += calculateBurst;
-    
-    
 }
 
+// Void to print results using global variables
 void printResult(int waittime, int turnaround, float responsetime, int time) {
     float calculateCPU = (float)burstHolder / timeHolder * 100;
     cout << "\nComplete time: " << timeHolder << endl;
@@ -139,6 +140,7 @@ int main() {
     int x = 0;
     int time = 0;
     int  CPUtime = 0;
+    // Initialize vector
     vector<vector<int>> processVector(proc);
     queue <int> pushQueue;
     processVector[0] = {5, 27, 3, 31, 5, 43, 4, 18, 6, 22, 4, 26, 3, 24, 4};
@@ -149,10 +151,12 @@ int main() {
     processVector[5] = {11, 22, 4, 8, 5, 10, 6, 12, 7, 14, 9, 18, 12, 24, 15, 30, 8};
     processVector[6] = {14, 46, 17, 41, 11, 42, 15, 21, 4, 32, 7, 19, 16, 33, 10};
     processVector[7] = {4, 14, 5, 33, 6, 51, 14, 73, 16, 87, 6};
+    // Set values of bursts as 0
     vector<int> bursts(proc,0);
     if (proc == 8) {
         int x = 0;
         for (auto i : processVector) {
+            // Push values
             pushQueue.push(x);
             x++;
         }
@@ -163,6 +167,7 @@ int main() {
     }
 
     cout << "\nFCFS\n" << endl;
+    // Call void function of FCFS
     fcfs(processVector, time, CPUtime, x, pushQueue, bursts);
     printResult(waitHolder, turnAroundHolder, responseHolder, timeHolder);
     return 0;
